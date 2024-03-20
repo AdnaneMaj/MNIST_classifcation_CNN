@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شوبيك لوبيك. الرقم اللي بغيتي بين يديك  </title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        #canvas-container {
+            text-align: center;
+            margin-top: 50px;
+        }
+        canvas {
+            border: 2px solid #343a40;
+            background-color: #fff;
+            margin: 20px auto;
+        }
+        button {
+            margin-top: 10px;
+        }
+        #matrixOutput {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 80%;
+            margin: 0 auto;
+        }
+        #predictionResult {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="canvas-container">
+            <h1>شوبيك لوبيك. الرقم اللي بغيتي بين يديك </h1>
+            <canvas id="myCanvas" width="140" height="140"></canvas>
+            <button class="btn btn-primary" onclick="clearCanvas()">مسح </button>
+            <button class="btn btn-success" onclick="sendMatrixToBackend()">شوف معاك هدا</button>
+            <pre id="matrixOutput"></pre>
+            <div id="predictionResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 5;
+        const numRows = canvas.height / gridSize;
+        const numCols = canvas.width / gridSize;
+
+        let matrix = initializeMatrix();
+        let isDrawing = false;
+
+        // Draw grid
+        for (let x = 0; x < canvas.width; x += gridSize) {
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.strokeRect(x, y, gridSize, gridSize);
+            }
+        }
+
+        // Add event listeners for drawing
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const x = e.offsetX;
+            const y = e.offsetY;
+            const row = Math.floor(y / gridSize);
+            const col = Math.floor(x / gridSize);
+            matrix[row][col] = 1;
+            ctx.fillStyle = 'black';
+            ctx.fillRect(col * gridSize, row * gridSize, gridSize, gridSize);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            matrix = initializeMatrix(); // Reset matrix
+        }
+
+        function initializeMatrix() {
+            const matrix = [];
+            for (let i = 0; i < numRows; i++) {
+                matrix.push(new Array(numCols).fill(0));
+            }
+            return matrix;
+        }
+
+        function sendMatrixToBackend() {
+            const imageData = {
+                image: matrix
+            };
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(imageData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Prediction result:', data);
+                // Display the predicted digit on the HTML page
+                document.getElementById('predictionResult').innerText = 'هدا ميكون غا: ' + data.predicted_digit;
+            })
+            .catch(error => {
+                console.error('Error sending matrix to backend:', error);
+            });
+        }
+    </script>
+</body>
+</html>
